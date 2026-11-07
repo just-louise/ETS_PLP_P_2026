@@ -159,9 +159,9 @@ SELECT x.id FROM pelanggan x
 WHERE x.id IN (SELECT x.pelanggan_id FROM pesanan x);
 ```
 
-**Akar masalah.** Pada tahap resolusi nama di resolver, mengacu pada konsep Bab 11 (Resolving and Binding - Scopes and Variable Resolution), rantai scope bekerja sebagai tumpukan (stack) leksikal di mana pencarian nama wajib ditelusuri dari scope paling dalam (innermost scope) menuju ke scope luar (enclosing/parent scope) agar deklarasi lokal dapat menutupi (shadowing) nama yang sama di scope luar. Pada kode awal fungsi `_lookup`, rantai scope dikumpulkan dari dalam ke luar ke dalam sebuah list namun kemudian urutannya dibalik dengan `reversed()`, sehingga iterasi pencarian justru dimulai dari scope paling luar dan mengembalikan binding milik query terluar.
+**Akar masalah.** Di tahap resolver, sesuai Bab 11 Crafting Interpreters (Resolving and Binding), rantai scope bekerja seperti tumpukan (stack): pencarian nama harus dimulai dari scope paling dalam (`self.scope`) lalu naik ke scope luarnya (`parent`) supaya alias di subquery bisa menutupi (shadowing) alias bernama sama di query luar. Di kode awal `_lookup`, rantai scope sudah dikumpulkan dari dalam ke luar ke dalam list `chain`, tapi malah dibalik pakai `reversed(chain)`. Gara-gara dibalik, resolver mengecek scope paling luar lebih dulu, sehingga `x` di dalam subquery salah nyambung ke `pelanggan` milik query luar.
 
-**Perbaikan.** `crud/resolver.py`, fungsi `_lookup`: langsung berjalan dari scope sekarang (`self.scope`) menuju induknya (`scope.parent`) dan berhenti saat kecocokan pertama ditemukan. Alternatif: tetap memakai list dan menghapus `reversed()`. Tidak dipilih karena list tidak diperlukan, loop langsung lebih sederhana.
+**Perbaikan.** `crud/resolver.py`, fungsi `_lookup`: langsung loop dari `self.scope` naik ke `scope.parent` dan kembalikan yang pertama cocok tanpa list dan `reversed()`. Alternatif: tetap memakai list dan menghapus `reversed()`. Tidak dipilih karena list tidak diperlukan, loop langsung lebih sederhana.
 
 **Test regresi.** `test_regresi_shadowing_alias_subquery_pakai_scope_terdalam`
 
@@ -182,7 +182,7 @@ DELETE FROM sesi s WHERE s.kedaluwarsa < :sekarang;
 SELECT s.id FROM pengguna u WHERE u.aktif = 1;
 ```
 
-**Akar masalah.** Pada tahap resolusi scope di resolver, sesuai konsep Bab 11 (Resolving and Binding - `beginScope` dan `endScope` pada tumpukan scope), siklus hidup setiap blok atau statement harus menjaga keseimbangan tumpukan dengan membuka scope (`_push`) saat masuk dan menutupnya (`_pop`) saat keluar. Pada fungsi `_delete`, resolver memanggil `self._push()` untuk mendeklarasikan tabel target `DELETE`, tetapi lupa memanggil `self._pop()` di akhir fungsi. Akibatnya, scope milik statement `DELETE` tidak pernah dikeluarkan dari stack dan bocor menjadi parent scope bagi statement berikutnya.
+**Akar masalah.** Di tahap resolver, sesuai Bab 11 Crafting Interpreters (pasangan `beginScope` dan `endScope` pada tumpukan scope), setiap statement yang membuka scope baru dengan `_push()` harus menutupnya lagi dengan `_pop()` saat statement itu selesai. Di kode awal, fungsi `_delete` memanggil `self._push()` di awal untuk menyimpan tabel dan alias `s`, tapi lupa memanggil `self._pop()` di akhir fungsi. Akibatnya, scope `DELETE` tidak pernah keluar dari tumpukan dan ikut terbawa sebagai `parent` saat statement `SELECT` berikutnya jalan.
 
 **Perbaikan.** `crud/resolver.py`, fungsi `_delete`: tambah `self._pop()` di akhir. Alternatif: mereset `self.scope = None` di tiap statement pada `resolve_script`. Tidak dipilih karena itu hanya menutupi gejala, penyebabnya (push dan pop tidak seimbang) tetap ada.
 
@@ -205,7 +205,7 @@ UPDATE pesanan SET status = 'BATAL'
 WHERE pelanggan_id IN (SELECT id FROM pelanggan WHERE diblokir = 1);
 ```
 
-**Akar masalah.** Pada tahap analisis AST di analyzer, mengacu pada konsep Bab 5 (Representing Code - Tree-Walk / AST Traversal), operasi semantik pada setiap sub-pohon AST bergantung pada konteks sintaksis tempat node tersebut berada. Pada statement `UPDATE`, hanya node tabel target utama yang mengalami modifikasi (`U`), sedangkan ekspresi di dalam klausa `SET` maupun kondisi `WHERE` (termasuk subquery di dalamnya) hanya membaca data (`R`). Pada kode awal `analyze_statement` cabang `ast.Update`, penelusuran rekursif `_collect` pada `assignment.value` dan `stmt.where` meneruskan parameter operasi `"U"`, sehingga semua tabel dan kolom yang muncul di dalam ekspresi atau subquery ikut ditandai sebagai operasi `"U"`.
+**Akar masalah.** Di tahap analyzer saat menelusuri pohon AST (Bab 5 Crafting Interpreters: Representing Code / penelusuran pohon), tidak semua bagian di dalam node `Update` punya operasi yang sama. Yang datanya diubah (`U`) hanya tabel target `stmt.table`, sedangkan ekspresi di nilai `SET` (`assignment.value`) dan kondisi `WHERE` (`stmt.where`) sifatnya hanya membaca data (`R`). Di kode awal `analyze_statement`, waktu memanggil `_collect` untuk nilai `SET` dan `WHERE`, parameter operasinya masih diisi `"U"`, sehingga tabel apa pun di dalam subquery `UPDATE` ikut dicatat `"U"`.
 
 **Perbaikan.** `crud/analyzer.py`, cabang `Update` di `analyze_statement`: dua panggilan `_collect` (nilai SET dan WHERE) diganti dari `"U"` ke `"R"`. Alternatif: fungsi khusus untuk UPDATE. Tidak dipilih karena berlebihan, cukup mengganti hurufnya.
 

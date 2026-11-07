@@ -2,8 +2,7 @@
 
 ## 1. Hasil evaluasi
 
-Tempel keluaran `python evaluate.py` setelah `data/ground_truth.csv` dilengkapi.
-
+```
 Dievaluasi: audit.sql, campuran_error.sql, laporan_penjualan.sql, pemeliharaan.sql (27 triple)
 
 Metode Precision Recall F1
@@ -27,29 +26,39 @@ terlewat (FN): ('audit.sql', 2, 'pesanan', 'R')
 terlewat (FN): ('laporan_penjualan.sql', 3, 'pelanggan', 'R')
 terlewat (FN): ('laporan_penjualan.sql', 3, 'pesanan', 'R')
 terlewat (FN): ('pemeliharaan.sql', 3, 'crm.alamat', 'R')
-terlewat (FN): ('pemeliharaan.sql', 3, 'crm.pelanggan', 'R')
-
+terlewat (FN): ('pemeliharaan.sql', 3, 'crm.pelanggan', 'R') 
+```
 ## 2. Tiga kasus di mana regex salah
 
-Untuk tiap kasus: SQL-nya, kesalahan regex, dan mengapa parser benar (kaitkan dengan konsep
-lexing, parsing, atau resolusi).
 
 1. Komentar dan Literal String yang Memuat Kata Kunci SQL
    sql:
-   SELECT id FROM pelanggan WHERE catatan = 'SELECT _ FROM pesanan';
+   -- DELETE FROM pelanggan
+    SELECT p.nama, SUM(o.total) AS omzet
+    FROM pelanggan p
+    JOIN pesanan o ON o.pelanggan_id = p.id
+    WHERE o.status = 'LUNAS' AND o.catatan <> 'FROM rahasia'
+    GROUP BY p.nama;
    Kesalahan regex:
-   Regex hanya mencocokkan pola teks (string matching). Regex akan salah mendeteksi adanya operasi SELECT pada tabel pesanan (karena teks di dalam tanda kutip '...') dan operasi UPDATE pada tabel pelanggan (padahal berada di dalam baris komentar --).
+   regex menghasilkan 2 False Positive nyata di evaluate.py: ('laporan_penjualan.sql', 2, 'pelanggan', 'D') karena mencocokkan teks komentar -- DELETE FROM pelanggan, dan ('laporan_penjualan.sql', 2, 'rahasia', 'R') karena mencocokkan kata FROM rahasia di dalam literal string 'FROM rahasia'.
    Mengapa Parser Benar:
-   Konsep Lexing (Bab 4): Lexer membuang komentar secara bersih (-- atau /_ ... _/) sehingga tidak menghasilkan token. Selain itu, teks 'SELECT _ FROM pesanan' dikenali sebagai satu token literal STRING, bukan rentetan kata kunci KEYWORD, sehingga parser tidak pernah menganggapnya sebagai klausul query.
-2. Operasi Subquery di dalam Statement UPDATE
+   Konsep Lexing (Bab 4): Lexer membuang komentar secara bersih (-- atau `/* ... */`) sehingga tidak menghasilkan token. Selain itu, teks 'SELECT _ FROM pesanan' dikenali sebagai satu token literal STRING, bukan rentetan kata kunci KEYWORD, sehingga parser tidak pernah menganggapnya sebagai klausul query.
+2. Klausa `FROM` pada Statement `DELETE` Terbaca Ganda sebagai Operasi  `R` SQL (`audit.sql` baris 16):
    sql:
-   UPDATE pesanan SET status = 'BATAL'
-   WHERE pelanggan_id IN (SELECT id FROM pelanggan WHERE diblokir = 1);
+   DELETE FROM sesi s WHERE s.kedaluwarsa < :sekarang;
    Kesalahan regex:
-   Regex tidak memahami konteks hierarki/pohon sintaks. Saat melihat UPDATE di awal baris, regex cenderung menggeneralisasi semua tabel yang disebutkan di dalam statement tersebut (baik pesanan maupun pelanggan) dengan operasi U ({pesanan: U, pelanggan: U}).
+   Di evaluate.py muncul False Positive ('audit.sql', 16, 'sesi', 'R'). Regex menjalankan semua pola di _PATTERNS secara terpisah pada teks statement yang sama, sehingga potongan FROM sesi cocok dengan dua pola sekaligus: pola DELETE\s+FROM (dicatat D) dan pola FROM biasa (sehingga ikut dicatat R).
    Mengapa Parser Benar:
-   onsep Parsing & AST (Bab 5 & 6): Parser menyusun query ke dalam pohon sintaks (Abstract Syntax Tree / AST). Tabel target UPDATE (pesanan) berada pada root statement Update, sedangkan pelanggan berada di dalam subtree Select (subquery). Sesuai spesifikasi proyek, membaca tabel lewat subquery selalu dicatat sebagai operasi R ({pesanan: U, pelanggan: R}).
-3.
+  Konsep Parsing (Bab 6): Saat token pertama adalah keyword DELETE, parser langsung masuk ke aturan grammar _delete yang mengenali FROM sesi sebagai tabel target penghapusan pada node ast.Delete, bukan sebagai klausa FROM pada query SELECT.
+3.Tabel Kedua pada Klausa `FROM` Dipisah Koma Terlewat (False Negative)
+  SQL (`audit.sql` baris 2):
+  SELECT p.id, p.nama
+  FROM pelanggan p, pesanan o
+  WHERE o.pelanggan_id = p.id ...
+  Kesalahan regex:
+  Di evaluate.py muncul False Negative terlewat (FN): ('audit.sql', 2, 'pesanan', 'R'). Pola regex FROM\s+([a-zA-Z_][\w.]*) hanya menangkap satu nama tabel tepat setelah kata kunci FROM (pelanggan), tetapi gagal mengenali tabel kedua (pesanan) yang dipisahkan tanda koma
+  Mengapa Parser Benar:
+  Konsep Parsing & Grammar (Bab 5 & 6): Sesuai aturan grammar from_clause -> "FROM" table_ref ( "," table_ref )*, fungsi _from_clause di parser memakai loop while self._match(T.COMMA): untuk membaca semua table_ref setelah koma dan menyimpannya ke dalam list sources pada node ast.Select.
 
 ## 3. Batas pendekatan kami
 
@@ -100,11 +109,11 @@ dan informasi apa yang dibutuhkan untuk mengatasinya.
   Perluasan aturan grammar pada parser untuk mengenali klausa `WITH [alias] AS (...)`,
   serta penanganan CTE pada resolver sebagai virtual table/temporary scope.
 
-3. **Resolusi wildcard (`_`) tanpa qualifier**
+3. **Resolusi wildcard (`*`) tanpa qualifier**
 
   **Contoh SQL:**
   ```sql
-  SELECT _
+  SELECT *
   FROM pelanggan p
   JOIN pesanan o ON p.id = o.pelanggan_id;
   ```
