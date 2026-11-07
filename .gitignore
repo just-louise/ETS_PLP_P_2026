@@ -12,6 +12,12 @@ dist/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+catatan_lexer.md
+probe_lexer.py
+crud_matrix.csv
+kolom.csv
+detail.csv
+*.pyc
 
 # ---- macOS ----
 .DS_Store
