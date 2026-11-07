@@ -21,7 +21,7 @@ sendiri dan memakai konsep dari _Crafting Interpreters_ (sebutkan bab). Bagian i
 select a from t
 ```
 
-**Akar masalah.** engacu pada konsep Bab 4 (Scanning - Reserved Words and Identifiers), lexer membedakan identifier biasa dan reserved word dengan mencocokkan teks string lexeme terhadap tabel/himpunan kata kunci (lookup table). Pada implementasi awal, lexer memeriksa string masukan secara persis (case-sensitive) ke dalam himpunan KEYWORDS yang didefinisikan dalam huruf kapital. Akibatnya, masukan berkasus huruf kecil seperti select tidak cocok dengan entri "SELECT", sehingga salah diklasifikasikan sebagai token IDENT biasa.
+**Akar masalah.** Mengacu pada konsep Bab 4 (Scanning - Reserved Words and Identifiers), lexer membedakan identifier biasa dan reserved word dengan mencocokkan teks string lexeme terhadap tabel/himpunan kata kunci (lookup table). Pada implementasi awal, lexer memeriksa string masukan secara persis (case-sensitive) ke dalam himpunan KEYWORDS yang didefinisikan dalam huruf kapital. Akibatnya, masukan berkasus huruf kecil seperti select tidak cocok dengan entri "SELECT", sehingga salah diklasifikasikan sebagai token IDENT biasa.
 
 **Perbaikan.** Pada crud/lexer.py, di fungsi \_word, teks hasil pemindaian diubah menjadi huruf besar terlebih dahulu menggunakan text.upper() sebelum diperiksa keanggotaannya di KEYWORDS. Jika cocok, token dibuat dengan tipe TokenType.KEYWORD dan nilainya dinormalisasi ke text.upper().
 
@@ -93,13 +93,13 @@ SELECT a FROM t WHERE a = 1 OR b = 2 AND c = 3
 
 **Test regresi.** `test_regresi_parser_and_lebih_kuat_dari_or`
 
-**Peran AI.** Tidak ada; pengelompokkan gramar langsung diadaptasi dari struktur equality -> comparison -> term -> factor pada Bab 6 buku acuan dan diverifikasi dengan pytest test_regresi_parser_and_lebih_kuat_dari_or.
+**Peran AI.** dipakai untuk menjelaskan konsep dan contoh dari stratifikasi grammar
 
 ---
 
 ## Bug 5: Error recovery membuang semua token sampai akhir file
 
-**Ditemukan oleh:** Luis Danang pambudi · **Diperbaiki oleh:** Luis Danang Pambudi
+**Ditemukan oleh:** Luis Danang Pambudi · **Diperbaiki oleh:** Luis Danang Pambudi
 
 **Gejala.** Input SELECT id nama, FROM x; UPDATE p SET a = 1; DELETE FROM k. Didapat: 1 error dan 0 statement. Diharapkan (bagian 6): satu error untuk statement rusak, dan UPDATE serta DELETE sesudahnya tetap diproses. Terlihat di campuran_error.sql: produk U dan keranjang D hilang dari matrix.
 
