@@ -5,9 +5,9 @@
 ```
 Dievaluasi: audit.sql, campuran_error.sql, laporan_penjualan.sql, pemeliharaan.sql (27 triple)
 
-Metode Precision Recall F1
-parser 1.00 1.00 1.00
-regex 0.65 0.81 0.72
+Metode   Precision  Recall     F1
+parser        1.00    1.00   1.00
+regex         0.65    0.81   0.72
 
 [regex]
 salah ditemukan (FP): ('audit.sql', 16, 'sesi', 'R')
@@ -136,7 +136,7 @@ Pair programming dilakukan dengan pergantian peran sebagai berikut:
 
 - **Luis Danang Pambudi (Anggota A)**
   - **Driver awal:** jam ke-1 (Orientasi & CLI), jam ke-3 (Parser), dan jam ke-5 (lexer).
-  - **Navigator awal:** jam ke-2 (analyxer) dan jam ke-4 (Resolver).
+  - **Navigator awal:** jam ke-2 (analyzer) dan jam ke-4 (Resolver).
 - **Muhammad Rafi Al Rabbani (Anggota B)**
   - **Driver awal:** jam ke-2 (analyzer) dan jam ke-4 (Resolver).
   - **Navigator awal:** jam ke-1 (Orientasi & CLI), jam ke-3 (Parser), dan jam ke-5 (lexer).

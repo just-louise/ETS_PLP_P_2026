@@ -15,5 +15,6 @@ Catat setiap penggunaan AI atau coding agent yang memengaruhi kode atau laporan.
 **Refleksi (3-5 kalimat).** Di bagian mana AI paling membantu? Di mana AI keliru atau
 menyesatkan, dan bagaimana kalian mengetahuinya?
 
-Bagian danang
+### Refleksi Tim
+
 AI sangat membantu dalam menjembatani pemahaman konsep teoretis dari buku Crafting Interpreters (seperti stratifikasi gramar rekursif pada Bab 6 dan mekanisme lookahead pemindai pada Bab 4) dengan struktur kode bahasa Python. Namun, saran implementasi kode dari AI sering kali menyesatkan karena terlalu terpaku pada gaya bahasa Lox—seperti menyarankan berhenti di keyword SELECT saat pemulihan kesalahan parser, yang justru merusak parsing SQL ber-subquery. Kami menyadarinya setelah melihat test case regresi gagal, sehingga logika tersebut kami ubah sendiri agar sepenuhnya patuh pada pembatas titik koma sesuai spesifikasi proyek. Selain itu, pada pengerjaan resolver dan laporan akhir, AI sempat keliru menulis nama method self.pop() (seharusnya self._pop()) serta mengklaim kesalahan regex yang tidak ada di output evaluate.py, yang langsung kami ketahui saat menjalankan pytest dan memeriksa daftar False Positive di terminal.

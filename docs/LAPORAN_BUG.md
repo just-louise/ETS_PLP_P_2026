@@ -3,10 +3,6 @@
 Salin blok di bawah untuk setiap bug. Bagian **Akar masalah** wajib ditulis dengan kata-kata
 sendiri dan memakai konsep dari _Crafting Interpreters_ (sebutkan bab). Bagian ini diuji lisan.
 
-> Daftar bug: 9 entri (6 oleh A di lexer dan parser, 3 oleh B di resolver dan analyzer).
-> Tiga TODO (T1, T2, T3) bukan bug; penyelesaiannya dicatat singkat di lampiran di bagian akhir.
-> Bagian bertanda `TODO-ISI` harus diisi sendiri sebelum dikumpulkan. Hapus catatan ini setelah semuanya terisi.
-
 ---
 
 ## Bug 1: Keyword huruf kecil dibaca sebagai IDENT (lexer)
@@ -49,7 +45,7 @@ SELECT a FROM t WHERE a <> 1
 
 **Test regresi.** `test_regresi_lexer_operator_tidak_sama_satu_token`
 
-**Peran AI.** menjelaskan materi yang belum di pahami pada diagram percabangan lalu mengidentifikasi bug nya dari penjelasan tersebut
+**Peran AI.** menjelaskan materi yang belum dipahami pada diagram percabangan lalu mengidentifikasi bug nya dari penjelasan tersebut
 
 ---
 
@@ -142,7 +138,7 @@ SELECT a FROM t LEFT OUTER JOIN u ON t.id = u.id
 
 **Test regresi.** `test_regresi_parser_left_outer_join`
 
-**Peran AI.** digunakan untuk menjelaskan aturan gramar dan memverifikasi/menganalisis dengan bug yang ada di program
+**Peran AI.** digunakan untuk menjelaskan aturan grammar dan memverifikasi/menganalisis dengan bug yang ada di program
 
 ---
 
@@ -217,7 +213,7 @@ WHERE pelanggan_id IN (SELECT id FROM pelanggan WHERE diblokir = 1);
 
 ## TODO
 
-| Kode | Isi                                        | Diselesaikan oleh Test   |
+| Kode | Isi                                        | Diselesaikan oleh        | Test                                                                                                     |
 | ---- | ------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------- |
 | T1   | `INSERT ... SELECT` di parser              | Luis Danang Pambudi      | `test_regresi_parser_insert_select`                                                                      |
 | T2   | Resolusi kolom tanpa qualifier di resolver | Muhammad Rafi Al Rabbani | `test_regresi_kolom_tanpa_qualifier_ambigu_jadi_warning`, `test_regresi_kolom_tanpa_qualifier_di_update` |
